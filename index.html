@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ShukaNavi - 就活ナビ</title>
+  <meta name="description" content="新卒就活を一元管理する就活サポートアプリ。スケジュール管理、企業トラッキング、ES管理、自己分析、面接対策を統合。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+JP:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Convex -->
+  <script src="https://unpkg.com/convex@1.21.0/dist/browser.bundle.js"></script>
+  <script>
+    // ★ ここにConvexのURLを設定（npx convex dev 実行後に自動設定される）
+    window.CONVEX_URL = "https://colorful-meerkat-684.convex.cloud";
+  </script>
+</head>
+
+<body>
+  <div class="app">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">🎯</span>
+          <h1>ShukaNavi</h1>
+        </div>
+        <p class="logo-sub">就活ナビ</p>
+      </div>
+      <ul class="nav-menu" id="nav-menu">
+        <li class="nav-item active" data-page="dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">ダッシュボード</span>
+        </li>
+        <li class="nav-item" data-page="companies">
+          <span class="nav-icon">🏢</span>
+          <span class="nav-label">企業管理</span>
+        </li>
+        <li class="nav-item" data-page="schedule">
+          <span class="nav-icon">📅</span>
+          <span class="nav-label">スケジュール</span>
+        </li>
+        <li class="nav-item" data-page="es-manager">
+          <span class="nav-icon">📝</span>
+          <span class="nav-label">ES・志望動機</span>
+        </li>
+        <li class="nav-item" data-page="self-analysis">
+          <span class="nav-icon">🎯</span>
+          <span class="nav-label">自己分析</span>
+        </li>
+        <li class="nav-item" data-page="obog-tracker">
+          <span class="nav-icon">🤝</span>
+          <span class="nav-label">OB・OG訪問</span>
+        </li>
+        <li class="nav-item" data-page="interview">
+          <span class="nav-icon">💬</span>
+          <span class="nav-label">面接対策</span>
+        </li>
+      </ul>
+      <div class="sidebar-footer">
+        <button class="btn-share" id="btn-share" title="友達に共有リンクを送る">
+          🔗 共有リンク生成
+        </button>
+        <button class="btn-export" id="btn-export" title="データをエクスポート">
+          💾 データ保存
+        </button>
+        <button class="btn-import" id="btn-import" title="データをインポート">
+          📂 データ読込
+        </button>
+        <input type="file" id="import-file" accept=".json" style="display:none" />
+      </div>
+    </nav>
+
+    <!-- Mobile menu toggle -->
+    <button class="mobile-menu-toggle" id="mobile-menu-toggle">☰</button>
+
+    <!-- Main Content -->
+    <main class="main-content" id="main-content">
+      <!-- Content will be injected by JS -->
+    </main>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script type="module" src="main.js"></script>
+</body>
+
+</html>
