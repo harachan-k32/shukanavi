@@ -84,9 +84,14 @@ export function renderCompanies() {
   });
 
   return `
-    <div class="page-header">
-      <h2>🏢 企業管理</h2>
-      <p>選考企業を一元管理・ステータスを追跡</p>
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: flex-end;">
+      <div>
+        <h2>🏢 企業管理</h2>
+        <p>選考企業を一元管理・ステータスを追跡</p>
+      </div>
+      <div style="font-size: 14px; font-weight: 600; color: var(--text-secondary); background: var(--bg-glass); padding: 8px 16px; border-radius: 20px;">
+        全 ${companies.length} 社
+      </div>
     </div>
 
     <!-- ツールバー -->
@@ -140,10 +145,14 @@ function renderKanbanCard(company) {
     <div class="kanban-card" draggable="true" data-company-id="${company.id}">
       <div class="kanban-card-header">
         <div class="kanban-card-icon">${getCompanyIcon(company.name)}</div>
-        <div class="kanban-card-info">
+        <div class="kanban-card-info" style="flex: 1;">
           <div class="kanban-card-name">${escapeHtml(company.name)}</div>
           <div class="kanban-card-industry">${escapeHtml(company.industry || '')}</div>
         </div>
+      </div>
+      
+      <div class="kanban-card-progress" style="margin: 12px 0 8px;">
+        ${renderProgressBadges(company)}
       </div>
       ${company.recruitUrl ? `
         <a href="${escapeHtml(company.recruitUrl)}" target="_blank" class="kanban-card-link" onclick="event.stopPropagation()">
@@ -165,6 +174,43 @@ function getCompanyIcon(name) {
   const colors = ['#7c3aed', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#06b6d4'];
   const colorIndex = name ? name.charCodeAt(0) % colors.length : 0;
   return `<span class="company-avatar" style="background: ${colors[colorIndex]}">${initials}</span>`;
+}
+
+function renderProgressBadges(company) {
+  if (!company.stages || company.stages.length === 0) return '';
+
+  // 完了しているステージと次のステージを抽出
+  const doneStages = company.stages.filter(s => s.done);
+  const totalStages = company.stages.length;
+
+  let html = `<div style="display: flex; gap: 4px; flex-wrap: wrap;">`;
+
+  company.stages.forEach((stage, index) => {
+    // 重要なステージだけをバッジにするか、簡略化するかは好みですが、
+    // ここではすべてのステージを小さなドット/バッジで表現します
+    if (stage.done) {
+      html += `<span title="${escapeHtml(stage.label)} (完了)" style="width: 12px; height: 12px; border-radius: 50%; background: var(--success); display: inline-block;"></span>`;
+    } else {
+      const isNext = index === doneStages.length;
+      if (isNext) {
+        // 次のステップ
+        html += `<span title="次: ${escapeHtml(stage.label)}" style="width: 12px; height: 12px; border-radius: 50%; background: transparent; border: 2px solid var(--accent-primary); display: inline-block;"></span>`;
+      } else {
+        html += `<span title="${escapeHtml(stage.label)}" style="width: 12px; height: 12px; border-radius: 50%; background: var(--border); display: inline-block;"></span>`;
+      }
+    }
+  });
+
+  html += `</div>`;
+
+  if (doneStages.length < totalStages) {
+    const nextStage = company.stages[doneStages.length];
+    html += `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">次: ${escapeHtml(nextStage.label)}</div>`;
+  } else {
+    html += `<div style="font-size: 11px; color: var(--success); margin-top: 4px;">全ステージ完了 🎉</div>`;
+  }
+
+  return html;
 }
 
 function getNextDeadline(company) {
