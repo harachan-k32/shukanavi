@@ -3,10 +3,13 @@ import { getData, updateData, generateId } from '../storage.js';
 
 const STATUS_MAP = {
   'interested': { label: '興味あり', icon: '◇', class: 'status-interested' },
+  'info-session': { label: '説明会', icon: '💡', class: 'status-info-session' },
   'es-submitted': { label: 'ES提出', icon: '→', class: 'status-es-submitted' },
+  'web-test': { label: 'Webテスト', icon: '💻', class: 'status-web-test' },
+  'gd': { label: 'GD', icon: '👥', class: 'status-gd' },
   'interview-1': { label: '一次面接', icon: '①', class: 'status-interview-1' },
   'interview-2': { label: '二次面接', icon: '②', class: 'status-interview-2' },
-  'interview': { label: '選考中', icon: '◎', class: 'status-interview' },
+  'interview-final': { label: '最終面接', icon: '👑', class: 'status-interview-final' },
   'offer': { label: '内定', icon: '✓', class: 'status-offer' },
   'rejected': { label: '不合格', icon: '✕', class: 'status-rejected' },
 };
@@ -18,6 +21,7 @@ const INDUSTRY_OPTIONS = [
 ];
 
 const DEFAULT_STAGES = [
+  { id: 'info', label: '会社説明会', done: false },
   { id: 'es', label: 'ES提出', done: false },
   { id: 'webtest', label: 'Webテスト', done: false },
   { id: 'gd', label: 'GD', done: false },
@@ -25,6 +29,50 @@ const DEFAULT_STAGES = [
   { id: 'interview2', label: '2次面接', done: false },
   { id: 'final', label: '最終面接', done: false },
 ];
+
+function initTimelineDragAndDrop(editorId) {
+  const editor = document.getElementById(editorId);
+  if (!editor) return;
+
+  let draggedItem = null;
+
+  editor.addEventListener('dragstart', (e) => {
+    const stage = e.target.closest('.timeline-stage');
+    if (!stage) return;
+    draggedItem = stage;
+    setTimeout(() => stage.classList.add('dragging'), 0);
+  });
+
+  editor.addEventListener('dragend', (e) => {
+    if (!draggedItem) return;
+    draggedItem.classList.remove('dragging');
+    draggedItem = null;
+  });
+
+  editor.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+    const afterElement = getDragAfterElement(editor, e.clientY);
+    if (afterElement == null) {
+      editor.appendChild(draggedItem);
+    } else {
+      editor.insertBefore(draggedItem, afterElement);
+    }
+  });
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.timeline-stage:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
+}
 
 export function renderCompanies() {
   const data = getData();
@@ -195,7 +243,7 @@ function openAddModal(openModal, closeModal, showToast, refreshPage) {
             <label class="form-label">選考タイムライン</label>
             <div class="timeline-editor" id="add-timeline-editor">
               ${DEFAULT_STAGES.map((stage, i) => `
-                <div class="timeline-stage" data-stage-index="${i}">
+                <div class="timeline-stage" draggable="true" data-stage-index="${i}">
                   <div class="timeline-stage-marker"></div>
                   <div class="timeline-stage-content">
                     <span class="timeline-stage-label">${stage.label}</span>
@@ -221,6 +269,8 @@ function openAddModal(openModal, closeModal, showToast, refreshPage) {
   `;
 
   openModal('企業を追加', body);
+
+  initTimelineDragAndDrop('add-timeline-editor');
 
   // 自動入力ボタン
   document.getElementById('btn-auto-extract')?.addEventListener('click', () => {
@@ -312,6 +362,7 @@ function openAddModal(openModal, closeModal, showToast, refreshPage) {
     const index = editor.children.length;
     const stageEl = document.createElement('div');
     stageEl.className = 'timeline-stage';
+    stageEl.draggable = true;
     stageEl.dataset.stageIndex = index;
     stageEl.innerHTML = `
       <div class="timeline-stage-marker"></div>
@@ -407,11 +458,11 @@ function openEditModal(id, openModal, closeModal, showToast, refreshPage) {
             </div>
             <div class="timeline-editor" id="edit-timeline-editor">
               ${stages.map((stage, i) => `
-                <div class="timeline-stage ${stage.done ? 'done' : ''}" data-stage-index="${i}">
+                <div class="timeline-stage ${stage.done ? 'done' : ''}" draggable="true" data-stage-index="${i}">
                   <div class="timeline-stage-marker" data-toggle-stage="${i}" title="クリックで完了/未完了を切替"></div>
                   <div class="timeline-stage-content">
                     <span class="timeline-stage-label">${escapeHtml(stage.label)}</span>
-                    ${stage.deadline ? `<span class="timeline-stage-date">${stage.deadline}</span>` : ''}
+                    ${stage.deadline ? `<span class="timeline-stage-date-wrapper" style="display:inline-flex; align-items:center; gap:4px;"><span class="timeline-stage-date">${stage.deadline}</span><button class="remove-deadline-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0 4px;" data-remove-deadline="${i}">✕</button></span>` : ''}
                   </div>
                   <button class="timeline-stage-deadline-btn" data-set-deadline="${i}" title="締切を設定">📅</button>
                   <button class="timeline-stage-remove-btn" data-remove-stage="${i}" title="削除">✕</button>
@@ -451,13 +502,26 @@ function openEditModal(id, openModal, closeModal, showToast, refreshPage) {
       });
     });
 
+    initTimelineDragAndDrop('edit-timeline-editor');
+
+    // 締切追加時のUIイベントと既存の削除ボタン設定
+    const setupDeadlineRemoveBtns = () => {
+      document.querySelectorAll('.remove-deadline-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          btn.closest('.timeline-stage-date-wrapper').remove();
+        });
+      });
+    };
+    setupDeadlineRemoveBtns();
+
     // 締切設定
     document.querySelectorAll('[data-set-deadline]').forEach(btn => {
       btn.addEventListener('click', () => {
         const idx = btn.dataset.setDeadline;
         const stage = btn.closest('.timeline-stage');
         const content = stage.querySelector('.timeline-stage-content');
-        const existing = content.querySelector('.timeline-stage-date');
+        const existing = content.querySelector('.timeline-stage-date-wrapper') || content.querySelector('.timeline-stage-date');
         if (existing) {
           existing.remove();
           return;
@@ -467,10 +531,12 @@ function openEditModal(id, openModal, closeModal, showToast, refreshPage) {
         input.className = 'form-input timeline-stage-date-input';
         input.style.cssText = 'padding: 4px 8px; font-size: 12px; width: auto; margin-top: 4px;';
         input.addEventListener('change', () => {
-          const dateSpan = document.createElement('span');
-          dateSpan.className = 'timeline-stage-date';
-          dateSpan.textContent = input.value;
-          input.replaceWith(dateSpan);
+          const wrapper = document.createElement('span');
+          wrapper.className = 'timeline-stage-date-wrapper';
+          wrapper.style.cssText = 'display:inline-flex; align-items:center; gap:4px;';
+          wrapper.innerHTML = `<span class="timeline-stage-date">${input.value}</span><button class="remove-deadline-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0 4px;">✕</button>`;
+          input.replaceWith(wrapper);
+          setupDeadlineRemoveBtns();
         });
         content.appendChild(input);
         input.focus();
@@ -491,17 +557,44 @@ function openEditModal(id, openModal, closeModal, showToast, refreshPage) {
       const idx = editor.children.length;
       const stageEl = document.createElement('div');
       stageEl.className = 'timeline-stage';
+      stageEl.draggable = true;
       stageEl.dataset.stageIndex = idx;
       stageEl.innerHTML = `
         <div class="timeline-stage-marker"></div>
         <div class="timeline-stage-content">
           <input type="text" class="form-input timeline-stage-input" placeholder="ステージ名" style="padding: 6px 10px; font-size: 13px;" />
         </div>
+        <button class="timeline-stage-deadline-btn" data-set-deadline="${idx}" title="締切を設定">📅</button>
         <button class="timeline-stage-remove-btn" title="削除">✕</button>
       `;
       editor.appendChild(stageEl);
       stageEl.querySelector('.timeline-stage-remove-btn').addEventListener('click', () => stageEl.remove());
       stageEl.querySelector('.timeline-stage-marker').addEventListener('click', () => stageEl.classList.toggle('done'));
+      stageEl.querySelector('.timeline-stage-deadline-btn').addEventListener('click', () => {
+        const content = stageEl.querySelector('.timeline-stage-content');
+        const existing = content.querySelector('.timeline-stage-date-wrapper');
+        if (existing) {
+          existing.remove();
+          return;
+        }
+        const input = document.createElement('input');
+        input.type = 'date';
+        input.className = 'form-input timeline-stage-date-input';
+        input.style.cssText = 'padding: 4px 8px; font-size: 12px; width: auto; margin-top: 4px;';
+        input.addEventListener('change', () => {
+          const wrapper = document.createElement('span');
+          wrapper.className = 'timeline-stage-date-wrapper';
+          wrapper.style.cssText = 'display:inline-flex; align-items:center; gap:4px;';
+          wrapper.innerHTML = `<span class="timeline-stage-date">${input.value}</span><button class="remove-deadline-btn" style="background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:12px; padding:0 4px;">✕</button>`;
+          input.replaceWith(wrapper);
+          wrapper.querySelector('.remove-deadline-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            wrapper.remove();
+          });
+        });
+        content.appendChild(input);
+        input.focus();
+      });
     });
 
     // 締切追加ボタン

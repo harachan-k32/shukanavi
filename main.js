@@ -1,10 +1,6 @@
 // main.js - SPAルーター & アプリケーションコントローラー
 import { renderDashboard, initDashboard } from './src/modules/dashboard.js';
 import { renderCompanies, initCompanies } from './src/modules/companies.js';
-import { renderSchedule, initSchedule } from './src/modules/schedule.js';
-import { renderEsManager, initEsManager } from './src/modules/es-manager.js';
-import { renderSelfAnalysis, initSelfAnalysis } from './src/modules/self-analysis.js';
-import { renderInterview, initInterview } from './src/modules/interview.js';
 import { renderObogTracker, initObogTracker } from './src/modules/obog-tracker.js';
 import { exportData, importData, getData, initConvex, createShareLink, getSharedData, getShareIdFromUrl } from './src/storage.js';
 
@@ -28,10 +24,6 @@ let isShareMode = false; // 共有（閲覧専用）モード
 const pages = {
     'dashboard': { render: renderDashboard, init: initDashboard },
     'companies': { render: renderCompanies, init: initCompanies },
-    'schedule': { render: renderSchedule, init: initSchedule },
-    'es-manager': { render: renderEsManager, init: initEsManager },
-    'self-analysis': { render: renderSelfAnalysis, init: initSelfAnalysis },
-    'interview': { render: renderInterview, init: initInterview },
     'obog-tracker': { render: renderObogTracker, init: initObogTracker },
 };
 
@@ -250,12 +242,15 @@ async function checkShareMode() {
         isShareMode = true;
 
         // UIを閲覧モードに
-        document.querySelector('.sidebar-footer').innerHTML = `
-            <div style="text-align:center;padding:12px;color:var(--color-text-muted);font-size:13px;">
-                👀 閲覧モード<br>
-                <a href="${window.location.pathname}" style="color:var(--color-primary);text-decoration:none;font-weight:600;">自分のデータに戻る →</a>
-            </div>
-        `;
+        const sidebarFooter = document.querySelector('.sidebar-footer');
+        if (sidebarFooter) {
+            sidebarFooter.innerHTML = `
+                <div style="text-align:center;padding:12px;color:var(--color-text-muted);font-size:13px;">
+                    👀 閲覧モード<br>
+                    <a href="${window.location.pathname}" style="color:var(--color-primary);text-decoration:none;font-weight:600;">自分のデータに戻る →</a>
+                </div>
+            `;
+        }
 
         // ヘッダーに閲覧モードバッジ追加
         const logoSub = document.querySelector('.logo-sub');
